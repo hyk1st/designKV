@@ -1,13 +1,10 @@
 package rpc
 
 import (
-	"context"
 	"fmt"
-	"log"
 	"raftKV/operation"
 	"raftKV/raft"
 	"raftKV/resp"
-	"time"
 )
 
 func StartServer(port int) {
@@ -58,66 +55,20 @@ func StartServer(port int) {
 		mux.ServeRESP,
 		func(conn resp.Conn) bool {
 			// use this function to accept or deny the connection.
-			ctx, _ := context.WithTimeout(context.Background(), time.Second*3)
-			session, err := raft.Raft.SyncGetSession(ctx, 1)
-			if err != nil {
-				return false
-			}
-			conn.SetSession(session)
-			log.Printf("accept: %s", conn.RemoteAddr())
+			//ctx, _ := context.WithTimeout(context.Background(), time.Second*3)
+			//session, err := raft.Raft.SyncGetSession(ctx, 1)
+			//if err != nil {
+			//	return false
+			//}
+			conn.SetSession(raft.Raft.GetNoOPSession(1))
+			//log.Printf("accept: %s", conn.RemoteAddr())
 
 			return true
 		},
 		func(conn resp.Conn, err error) {
 			// this is called when the connection has been closed
-			ctx, _ := context.WithTimeout(context.Background(), time.Second*3)
-			raft.Raft.SyncCloseSession(ctx, conn.GetSession())
-			log.Printf("closed: %s, err: %v", conn.RemoteAddr(), err)
+			//ctx, _ := context.WithTimeout(context.Background(), time.Second*3)
+			//raft.Raft.SyncCloseSession(ctx, conn.GetSession())
+			//log.Printf("closed: %s, err: %v", conn.RemoteAddr(), err)
 		})
 }
-
-//type Server struct {
-//	*gnet.EventServer
-//}
-//
-//func (es *Server) React(frame []byte, c gnet.Conn) (out []byte, action gnet.Action) {
-//	var temp operation.Operation
-//	err := json.Unmarshal(frame, &temp)
-//	if err != nil {
-//		log.Printf("server react unmarshal error: %t\n", err)
-//		out = []byte("server react unmarshal error")
-//		return
-//	}
-//	ctx, _ := context.WithTimeout(context.Background(), time.Second*2)
-//	if temp.Type <= operation.ZRANGEBYSCORE {
-//		val, err := raft.Raft.SyncRead(ctx, 1, temp)
-//		if err != nil {
-//
-//			log.Printf("command read error: %t\n", err)
-//			out = []byte("command read error")
-//			return
-//		}
-//		str := val.(string)
-//		out = []byte(str)
-//		return
-//	}
-//	fmt.Println(temp)
-//	session, err := raft.Raft.SyncGetSession(ctx, temp.ID)
-//	if err != nil {
-//		log.Printf("get client session error: %t\n", err)
-//		out = []byte("get client session error")
-//	}
-//	res, err := raft.Raft.SyncPropose(ctx, session, frame)
-//	if err != nil {
-//		log.Printf("syncPropose error: %t\n", err)
-//		out = []byte("syncPropose error")
-//		return
-//	}
-//	out = res.Data
-//	return
-//}
-//
-//func StartServer(port int) {
-//	echo := new(Server)
-//	log.Fatal(gnet.Serve(echo, fmt.Sprintf("tcp://:%d", port), gnet.WithMulticore(true)))
-//}

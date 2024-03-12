@@ -1,12 +1,13 @@
 package operation
 
 import (
+	"encoding/json"
 	"fmt"
-	"github.com/bytedance/sonic"
 	"golang.org/x/net/context"
 	"log"
 	"raftKV/raft"
 	"raftKV/resp"
+	"raftKV/stateMachine"
 	"time"
 )
 
@@ -42,15 +43,17 @@ func (h *HandleFuns) Set(conn resp.Conn, cmd resp.Command) {
 		conn.WriteError("ERR wrong number of arguments for '" + string(cmd.Args[0]) + "' command")
 		return
 	}
-
-	by, _ := sonic.Marshal(cmd.Args)
+	temp := stateMachine.KVData{
+		Key: string(cmd.Args[1]),
+		Val: string(cmd.Args[2]),
+	}
+	by, _ := json.Marshal(temp)
 
 	ctx, _ := context.WithTimeout(context.Background(), time.Second*3)
 	res, err := raft.Raft.SyncPropose(ctx, conn.GetSession(), by)
 	if err != nil {
 		conn.WriteError(fmt.Sprintf("error on command set: %t", err))
 	} else {
-		conn.GetSession().ProposalCompleted()
 		conn.WriteBulk(res.Data)
 	}
 }
@@ -61,7 +64,7 @@ func (h *HandleFuns) SetNx(conn resp.Conn, cmd resp.Command) {
 		return
 	}
 
-	by, _ := sonic.Marshal(cmd.Args)
+	by, _ := json.Marshal(cmd.Args)
 
 	ctx, _ := context.WithTimeout(context.Background(), time.Second*3)
 	res, err := raft.Raft.SyncPropose(ctx, conn.GetSession(), by)
@@ -79,7 +82,7 @@ func (h *HandleFuns) SetEx(conn resp.Conn, cmd resp.Command) {
 		return
 	}
 
-	by, _ := sonic.Marshal(cmd.Args)
+	by, _ := json.Marshal(cmd.Args)
 
 	ctx, _ := context.WithTimeout(context.Background(), time.Second*3)
 	res, err := raft.Raft.SyncPropose(ctx, conn.GetSession(), by)
@@ -97,7 +100,7 @@ func (h *HandleFuns) Expire(conn resp.Conn, cmd resp.Command) {
 		return
 	}
 
-	by, _ := sonic.Marshal(cmd.Args)
+	by, _ := json.Marshal(cmd.Args)
 
 	ctx, _ := context.WithTimeout(context.Background(), time.Second*3)
 	res, err := raft.Raft.SyncPropose(ctx, conn.GetSession(), by)
@@ -133,7 +136,7 @@ func (h *HandleFuns) Get(conn resp.Conn, cmd resp.Command) {
 		return
 	}
 	ctx, _ := context.WithTimeout(context.Background(), time.Second*3)
-	res, err := raft.Raft.SyncRead(ctx, 1, cmd.Args)
+	res, err := raft.Raft.SyncRead(ctx, 1, cmd.Args[1])
 	//h.itemsMux.RLock()
 	//val, ok := h.items[string(cmd.Args[1])]
 	//h.itemsMux.RUnlock()
@@ -141,7 +144,7 @@ func (h *HandleFuns) Get(conn resp.Conn, cmd resp.Command) {
 		log.Println(err)
 		conn.WriteBulk([]byte(fmt.Sprintf("get key error: %t", err)))
 	} else {
-		conn.WriteString(res.(string))
+		conn.WriteString(string(res.([]byte)))
 	}
 }
 
@@ -166,7 +169,7 @@ func (h *HandleFuns) Delete(conn resp.Conn, cmd resp.Command) {
 		return
 	}
 
-	by, _ := sonic.Marshal(cmd.Args)
+	by, _ := json.Marshal(cmd.Args)
 
 	ctx, _ := context.WithTimeout(context.Background(), time.Second*3)
 	res, err := raft.Raft.SyncPropose(ctx, conn.GetSession(), by)
@@ -185,7 +188,7 @@ func (h *HandleFuns) INCRBY(conn resp.Conn, cmd resp.Command) {
 		return
 	}
 
-	by, _ := sonic.Marshal(cmd.Args)
+	by, _ := json.Marshal(cmd.Args)
 
 	ctx, _ := context.WithTimeout(context.Background(), time.Second*3)
 	res, err := raft.Raft.SyncPropose(ctx, conn.GetSession(), by)
@@ -204,7 +207,7 @@ func (h *HandleFuns) Lpush(conn resp.Conn, cmd resp.Command) {
 		return
 	}
 
-	by, _ := sonic.Marshal(cmd.Args)
+	by, _ := json.Marshal(cmd.Args)
 
 	ctx, _ := context.WithTimeout(context.Background(), time.Second*3)
 	res, err := raft.Raft.SyncPropose(ctx, conn.GetSession(), by)
@@ -222,7 +225,7 @@ func (h *HandleFuns) Rpush(conn resp.Conn, cmd resp.Command) {
 		return
 	}
 
-	by, _ := sonic.Marshal(cmd.Args)
+	by, _ := json.Marshal(cmd.Args)
 
 	ctx, _ := context.WithTimeout(context.Background(), time.Second*3)
 	res, err := raft.Raft.SyncPropose(ctx, conn.GetSession(), by)
@@ -241,7 +244,7 @@ func (h *HandleFuns) Lpop(conn resp.Conn, cmd resp.Command) {
 		return
 	}
 
-	by, _ := sonic.Marshal(cmd.Args)
+	by, _ := json.Marshal(cmd.Args)
 
 	ctx, _ := context.WithTimeout(context.Background(), time.Second*3)
 	res, err := raft.Raft.SyncPropose(ctx, conn.GetSession(), by)
@@ -259,7 +262,7 @@ func (h *HandleFuns) Rpop(conn resp.Conn, cmd resp.Command) {
 		return
 	}
 
-	by, _ := sonic.Marshal(cmd.Args)
+	by, _ := json.Marshal(cmd.Args)
 
 	ctx, _ := context.WithTimeout(context.Background(), time.Second*3)
 	res, err := raft.Raft.SyncPropose(ctx, conn.GetSession(), by)
@@ -295,7 +298,7 @@ func (h *HandleFuns) Hset(conn resp.Conn, cmd resp.Command) {
 		return
 	}
 
-	by, _ := sonic.Marshal(cmd.Args)
+	by, _ := json.Marshal(cmd.Args)
 
 	ctx, _ := context.WithTimeout(context.Background(), time.Second*3)
 	res, err := raft.Raft.SyncPropose(ctx, conn.GetSession(), by)
@@ -314,7 +317,7 @@ func (h *HandleFuns) Hdel(conn resp.Conn, cmd resp.Command) {
 		return
 	}
 
-	by, _ := sonic.Marshal(cmd.Args)
+	by, _ := json.Marshal(cmd.Args)
 
 	ctx, _ := context.WithTimeout(context.Background(), time.Second*3)
 	res, err := raft.Raft.SyncPropose(ctx, conn.GetSession(), by)
@@ -385,7 +388,7 @@ func (h *HandleFuns) SADD(conn resp.Conn, cmd resp.Command) {
 		return
 	}
 
-	by, _ := sonic.Marshal(cmd.Args)
+	by, _ := json.Marshal(cmd.Args)
 
 	ctx, _ := context.WithTimeout(context.Background(), time.Second*3)
 	res, err := raft.Raft.SyncPropose(ctx, conn.GetSession(), by)
@@ -403,7 +406,7 @@ func (h *HandleFuns) SREM(conn resp.Conn, cmd resp.Command) {
 		return
 	}
 
-	by, _ := sonic.Marshal(cmd.Args)
+	by, _ := json.Marshal(cmd.Args)
 
 	ctx, _ := context.WithTimeout(context.Background(), time.Second*3)
 	res, err := raft.Raft.SyncPropose(ctx, conn.GetSession(), by)
@@ -493,7 +496,7 @@ func (h *HandleFuns) ZADD(conn resp.Conn, cmd resp.Command) {
 		return
 	}
 
-	by, _ := sonic.Marshal(cmd.Args)
+	by, _ := json.Marshal(cmd.Args)
 
 	ctx, _ := context.WithTimeout(context.Background(), time.Second*3)
 	res, err := raft.Raft.SyncPropose(ctx, conn.GetSession(), by)
@@ -512,7 +515,7 @@ func (h *HandleFuns) ZREM(conn resp.Conn, cmd resp.Command) {
 		return
 	}
 
-	by, _ := sonic.Marshal(cmd.Args)
+	by, _ := json.Marshal(cmd.Args)
 
 	ctx, _ := context.WithTimeout(context.Background(), time.Second*3)
 	res, err := raft.Raft.SyncPropose(ctx, conn.GetSession(), by)
@@ -530,7 +533,7 @@ func (h *HandleFuns) ZINCRBY(conn resp.Conn, cmd resp.Command) {
 		return
 	}
 
-	by, _ := sonic.Marshal(cmd.Args)
+	by, _ := json.Marshal(cmd.Args)
 
 	ctx, _ := context.WithTimeout(context.Background(), time.Second*3)
 	res, err := raft.Raft.SyncPropose(ctx, conn.GetSession(), by)
